@@ -16,6 +16,7 @@ const openFavorites = new Map();
 const updateStatus = document.getElementById("updateStatus");
 const THEME_KEY = "kvb_theme";
 const directionFilters = new Map();
+const lineFilters = new Map();
 const expandedDepartures = new Set();
 
 function loadFavorites() {
@@ -82,23 +83,28 @@ async function getDepartures(favorite) {
 function departureMarkup(departures, favoriteName = "") {
   if (!departures.length) return `<p class="empty-copy">Keine Abfahrten gefunden.</p>`;
   const directions = [...new Set(departures.map(item => item.direction).filter(Boolean))];
+  const lines = [...new Set(departures.map(item => item.line).filter(Boolean))];
   const selectedDirection = directionFilters.get(favoriteName) || "all";
-  const visibleDepartures = selectedDirection === "all" ? departures : departures.filter(item => item.direction === selectedDirection);
+  const selectedLine = lineFilters.get(favoriteName) || "all";
+  const directionDepartures = selectedDirection === "all" ? departures : departures.filter(item => item.direction === selectedDirection);
+  const visibleDepartures = selectedLine === "all" ? directionDepartures : directionDepartures.filter(item => item.line === selectedLine);
   const displayedDepartures = expandedDepartures.has(favoriteName) ? visibleDepartures : visibleDepartures.slice(0, 4);
-  const directionMarkup = directions.length > 1 ? `<div class="departure-tools"><div class="direction-filters" role="group" aria-label="Richtung auswählen"><button type="button" class="direction-filter ${selectedDirection === "all" ? "is-active" : ""}" data-direction="all">Alle</button>${directions.map(direction => `<button type="button" class="direction-filter ${selectedDirection === direction ? "is-active" : ""}" data-direction="${escapeHtml(direction)}">${escapeHtml(direction)}</button>`).join("")}</div><button type="button" class="share-stop">Teilen</button></div>` : `<div class="share-row"><button type="button" class="share-stop">Teilen</button></div>`;
+  const filterMarkup = directions.length > 1 || lines.length > 1 ? `<div class="departure-tools"><div class="filter-groups">${lines.length > 1 ? `<div class="filter-group"><span class="filter-label" id="line-filter-label-${favoriteName.replace(/[^a-z0-9]/gi, "-")}">Linie</span><div class="direction-filters" role="group" aria-labelledby="line-filter-label-${favoriteName.replace(/[^a-z0-9]/gi, "-")}"><button type="button" class="direction-filter ${selectedLine === "all" ? "is-active" : ""}" data-line="all">Alle</button>${lines.map(line => `<button type="button" class="direction-filter ${selectedLine === line ? "is-active" : ""}" data-line="${escapeHtml(line)}">${escapeHtml(line)}</button>`).join("")}</div></div>` : ""}${directions.length > 1 ? `<div class="filter-group"><span class="filter-label">Richtung</span><div class="direction-filters" role="group" aria-label="Richtung auswählen"><button type="button" class="direction-filter ${selectedDirection === "all" ? "is-active" : ""}" data-direction="all">Alle</button>${directions.map(direction => `<button type="button" class="direction-filter ${selectedDirection === direction ? "is-active" : ""}" data-direction="${escapeHtml(direction)}">${escapeHtml(direction)}</button>`).join("")}</div></div>` : ""}</div><button type="button" class="share-stop">Teilen</button></div>` : `<div class="share-row"><button type="button" class="share-stop">Teilen</button></div>`;
   const cacheNotice = departures.fromCache ? `<p class="cache-notice">Letzter bekannter Stand – Aktualisierung momentan nicht möglich.</p>` : "";
-  if (!visibleDepartures.length) return `${directionMarkup}${cacheNotice}<p class="empty-copy">Keine Abfahrten für diese Richtung.</p>`;
+  if (!visibleDepartures.length) return `${filterMarkup}${cacheNotice}<p class="empty-copy">Keine Abfahrten für diese Auswahl.</p>`;
   const moreButton = visibleDepartures.length > 4 ? `<button type="button" class="more-departures">${expandedDepartures.has(favoriteName) ? "Weniger anzeigen" : `+ ${visibleDepartures.length - 4} weitere`}</button>` : "";
-  return `${directionMarkup}${cacheNotice}<div class="departures">${displayedDepartures.map(departure => {
+  return `${filterMarkup}${cacheNotice}<div class="departures">${displayedDepartures.map(departure => {
     const departureDate = new Date(departure.time);
     const time = departureDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
     const minutes = Math.max(0, Math.round((departureDate.getTime() - Date.now()) / 60000));
     const relative = minutes === 0 ? "jetzt" : `in ${minutes} Min.`;
-    const status = departure.realtime ? "Echtzeit" : "Fahrplan";
-    const delay = departure.delayMinutes ? `<em class="delay-badge">+${departure.delayMinutes} Min.</em>` : "";
+    const cancelled = departure.cancelled || departure.status === "cancelled";
+    const status = cancelled ? "Fällt aus" : departure.realtime ? "Echtzeit" : "Fahrplan";
+    const statusClass = cancelled ? "status-cancelled" : departure.delayMinutes > 0 ? "status-delayed" : "status-on-time";
+    const delay = cancelled ? `<em class="status-badge status-badge--cancelled">Ausfall</em>` : departure.delayMinutes > 0 ? `<em class="status-badge status-badge--delayed">+${departure.delayMinutes} Min.</em>` : `<em class="status-badge status-badge--on-time">Pünktlich</em>`;
     const platform = departure.platform ? ` · Gleis ${escapeHtml(departure.platform)}` : "";
     const type = /^\d+$/.test(departure.line) && Number(departure.line) < 100 ? "tram" : "bus";
-    return `<div class="departure"><span class="line-badge line-badge--${type}">${escapeHtml(departure.line)}</span><span class="departure-info"><strong class="departure-countdown">${relative}</strong><span class="departure-detail">${escapeHtml(departure.direction)}${platform} · ${status}</span></span><span class="departure-time">${time}</span>${delay}</div>`;
+    return `<div class="departure ${statusClass}" aria-label="Linie ${escapeHtml(departure.line)}, Richtung ${escapeHtml(departure.direction)}, ${cancelled ? "fällt aus" : `${time}, ${status}`}"><span class="line-badge line-badge--${type}">${escapeHtml(departure.line)}</span><span class="departure-info"><strong class="departure-countdown">${relative}</strong><span class="departure-detail">${escapeHtml(departure.direction)}${platform} · ${status}</span></span><span class="departure-time">${time}</span>${delay}</div>`;
   }).join("")}</div>${moreButton}`;
 }
 
@@ -133,7 +139,8 @@ function renderFavorite(favorite, index) {
 
 function bindDepartureActions(slot, favorite) {
   slot.querySelectorAll(".direction-filter").forEach(button => button.addEventListener("click", () => {
-    directionFilters.set(favorite.name, button.dataset.direction);
+    if (button.dataset.line) lineFilters.set(favorite.name, button.dataset.line);
+    if (button.dataset.direction) directionFilters.set(favorite.name, button.dataset.direction);
     const entry = openFavorites.get(favorite.name);
     if (entry?.departures || favorite.departures) { slot.innerHTML = departureMarkup(entry?.departures || favorite.departures, favorite.name); bindDepartureActions(slot, favorite); }
   }));
@@ -323,7 +330,7 @@ document.getElementById("toggleDisruptions").addEventListener("click", async () 
 
 setInterval(async () => {
   for (const entry of openFavorites.values()) {
-    try { entry.slot.innerHTML = departureMarkup(await getDepartures(entry.favorite)); } catch { /* Die letzte Anzeige bleibt sichtbar. */ }
+    try { const departures = await getDepartures(entry.favorite); entry.departures = departures; entry.slot.innerHTML = departureMarkup(departures, entry.favorite.name); bindDepartureActions(entry.slot, entry.favorite); } catch { /* Die letzte Anzeige bleibt sichtbar. */ }
   }
 }, 60000);
 
