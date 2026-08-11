@@ -12,6 +12,9 @@ button:focus-visible,a:focus-visible,input:focus-visible { outline:3px solid var
 .update-notice button { flex:0 0 auto; padding:8px 10px; border:0; border-radius:9px; background:var(--purple); color:#fff; font-size:12px; font-weight:800; }
 .update-notice button:disabled { cursor:wait; opacity:.7; }
 .app-shell { max-width:760px; min-height:100svh; margin:0 auto; padding:28px 18px 118px; }
+.update-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; padding:11px 13px; border:1px solid var(--purple); border-radius:14px; background:var(--surface); color:var(--ink); font-size:12px; }
+.update-notice[hidden] { display:none; }
+.update-notice button { flex:0 0 auto; padding:7px 10px; border:0; border-radius:9px; background:var(--purple); color:#fff; font-size:12px; font-weight:700; }
 .topbar,.section-heading,.sheet-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .topbar { margin-bottom:26px; }
 .topbar-actions { display:flex; gap:8px; }
