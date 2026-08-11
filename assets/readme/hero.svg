@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">KVB Abfahrten</title>
+  <desc id="desc">Eine ruhige, offlinefähige PWA für Kölner Abfahrten mit Favoriten und Echtzeitstatus.</desc>
+  <rect width="1200" height="360" rx="28" fill="#17132b"/>
+  <path d="M52 292H1148" stroke="#3c3558" stroke-width="2"/>
+  <path d="M52 72H604" stroke="#9b85ff" stroke-width="4"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <text x="56" y="58" fill="#b9b2ca" font-size="18" font-weight="700" letter-spacing="3">KÖLN · ÖPNV · PWA</text>
+    <text x="56" y="134" fill="#f4f1ff" font-size="64" font-weight="800" letter-spacing="-2">KVB Abfahrten</text>
+    <text x="58" y="178" fill="#d3cdef" font-size="25">Deine Haltestellen. Echtzeit im Blick.</text>
+    <text x="58" y="226" fill="#9b85ff" font-size="17" font-weight="700">FAVORITEN  ·  FILTER  ·  OFFLINE-FALLBACK</text>
+  </g>
+  <g transform="translate(752 54)">
+    <rect width="348" height="214" rx="22" fill="#211e31" stroke="#514879" stroke-width="2"/>
+    <rect x="22" y="22" width="70" height="34" rx="9" fill="#5137c4"/>
+    <text x="57" y="45" fill="#fff" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="17" font-weight="800" text-anchor="middle">16</text>
+    <text x="112" y="45" fill="#f4f1ff" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="18" font-weight="700">Bad Godesberg</text>
+    <text x="22" y="92" fill="#9b85ff" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">in 4 Min.</text>
+    <text x="22" y="120" fill="#b9b2ca" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15">Echtzeit · Steig 2</text>
+    <text x="275" y="92" fill="#f4f1ff" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="22" font-weight="800">09:44</text>
+    <path d="M22 145H326" stroke="#3c3558"/>
+    <rect x="22" y="164" width="70" height="30" rx="8" fill="#18734f"/>
+    <text x="57" y="184" fill="#fff" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="800" text-anchor="middle">Bus 130</text>
+    <text x="112" y="184" fill="#b9b2ca" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15">in 11 Min. · pünktlich</text>
+  </g>
+  <g fill="#9b85ff"><circle cx="1100" cy="315" r="5"/><circle cx="1120" cy="315" r="5"/><circle cx="1140" cy="315" r="5"/></g>
+</svg>
