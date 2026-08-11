@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#6b4de6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="KVB">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>KVB Abfahrten</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Köln · ÖPNV</p>
+        <h1>Wohin geht’s?</h1>
+        <p id="updateStatus" class="update-status" aria-live="polite">Letzte Aktualisierung: —</p>
+      </div>
+      <div class="topbar-actions"><button class="avatar-button" id="toggleSearch" type="button" aria-expanded="false" aria-controls="stopSearch" aria-label="Haltestelle suchen"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg></button><button class="avatar-button" id="toggleTheme" type="button" aria-label="Dark Mode aktivieren"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 15.3A8 8 0 0 1 8.7 4 8.5 8.5 0 1 0 20 15.3Z"></path></svg></button><button class="avatar-button" id="refreshAll" type="button" aria-label="Abfahrten aktualisieren"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.8-4L3 10"></path><path d="M3 5v5h5"></path><path d="M4 13a8 8 0 0 0 14.8 4L21 14"></path><path d="M21 19v-5h-5"></path></svg></button></div>
+    </header>
+
+    <main>
+      <form class="search-panel is-collapsed" id="stopSearchForm">
+        <label for="stopSearch">Haltestelle suchen</label>
+        <div class="search-row">
+          <span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg></span>
+          <input id="stopSearch" type="search" placeholder="z. B. Barbarossaplatz" autocomplete="off">
+          <button type="submit" class="search-submit">Suchen</button>
+        </div>
+        <div id="searchResults" class="search-results" hidden></div>
+      </form>
+
+      <section class="section-block shared-stop-panel" id="sharedStopPanel" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Geteilt</p><h2 id="sharedStopName">Haltestelle</h2></div><button class="close-button shared-close" id="closeSharedStop" type="button" aria-label="Geteilte Haltestelle schließen"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></div>
+        <div id="sharedStopContent"></div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-heading">
+          <div>
+            <h2>Meine Haltestellen</h2>
+          </div>
+          <button class="text-button" id="manageFavorites" type="button">Bearbeiten</button>
+        </div>
+        <div id="favoriteList" class="stop-list"></div>
+      </section>
+
+      <section class="section-block nearby-block">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Entdecken</p>
+            <h2>In der Nähe</h2>
+          </div>
+          <button class="text-button" id="findNearby" type="button">Standort</button>
+        </div>
+        <p id="nearbyMessage" class="empty-copy">Haltestellen in deiner Nähe anzeigen.</p>
+        <div id="nearbyList" class="stop-list"></div>
+      </section>
+
+      <section class="section-block disruption-block">
+        <div class="section-heading"><div><p class="eyebrow">Aktuell</p><h2>Störungen</h2></div><button id="toggleDisruptions" class="text-button" type="button" aria-expanded="false">Anzeigen</button></div>
+        <div id="disruptionPanel" hidden><span id="disruptionStatus" class="update-status">Wird geladen …</span><div id="disruptionList" class="disruption-list"></div></div>
+      </section>
+    </main>
+
+    <footer class="app-footer">Made with <span aria-label="Liebe">♥</span> in Cologne by <a href="https://ekrem.eu" target="_blank" rel="noreferrer">ekrem.eu</a></footer>
+
+  </div>
+
+  <dialog id="manageDialog" class="sheet-dialog">
+    <form method="dialog" class="sheet-content">
+      <div class="sheet-handle"></div>
+      <div class="sheet-heading"><h2>Favoriten verwalten</h2><button value="cancel" class="close-button" aria-label="Schließen">×</button></div>
+      <div id="manageList" class="manage-list"></div>
+      <button id="sheetAdd" class="primary-button" type="button">Neue Haltestelle suchen</button>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+</body>
+</html>
