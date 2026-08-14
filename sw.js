@@ -1,4 +1,4 @@
-const CACHE = "kvb-shell-v5";
+const CACHE = "kvb-shell-v6";
 const ASSETS = ["./index.htm", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {

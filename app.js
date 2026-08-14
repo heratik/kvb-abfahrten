@@ -17,6 +17,7 @@ const updateStatus = document.getElementById("updateStatus");
 const THEME_KEY = "kvb_theme";
 const directionFilters = new Map();
 const lineFilters = new Map();
+const typeFilters = new Map();
 const expandedDepartures = new Set();
 
 function loadFavorites() {
@@ -46,6 +47,17 @@ function friendlyError(error, fallback = "Die Daten sind momentan nicht verfügb
   if (!navigator.onLine) return "Keine Internetverbindung. Bitte später erneut versuchen.";
   if (error?.name === "TypeError") return "Verbindung zur KVB konnte nicht hergestellt werden.";
   return error?.message || fallback;
+}
+
+function departureType(line) {
+  return /^\d+$/.test(String(line)) && Number(line) < 100 ? "bahn" : "bus";
+}
+
+function departureTypeMarkup(departures, favoriteName = "") {
+  const types = [...new Set(departures.map(item => departureType(item.line)))];
+  if (types.length < 2) return "";
+  const selectedType = typeFilters.get(favoriteName) || "all";
+  return `<div class="departure-filter-strip"><span class="filter-label">Verkehrsmittel</span><div class="direction-filters" role="group" aria-label="Verkehrsmittel auswählen"><button type="button" class="direction-filter ${selectedType === "all" ? "is-active" : ""}" data-type="all">Alle</button><button type="button" class="direction-filter ${selectedType === "bahn" ? "is-active" : ""}" data-type="bahn">Bahn</button><button type="button" class="direction-filter ${selectedType === "bus" ? "is-active" : ""}" data-type="bus">Bus</button></div></div>`;
 }
 
 function setTheme(theme) {
@@ -86,14 +98,17 @@ function departureMarkup(departures, favoriteName = "") {
   const lines = [...new Set(departures.map(item => item.line).filter(Boolean))];
   const selectedDirection = directionFilters.get(favoriteName) || "all";
   const selectedLine = lineFilters.get(favoriteName) || "all";
+  const selectedType = typeFilters.get(favoriteName) || "all";
   const directionDepartures = selectedDirection === "all" ? departures : departures.filter(item => item.direction === selectedDirection);
-  const visibleDepartures = selectedLine === "all" ? directionDepartures : directionDepartures.filter(item => item.line === selectedLine);
+  const lineDepartures = selectedLine === "all" ? directionDepartures : directionDepartures.filter(item => item.line === selectedLine);
+  const visibleDepartures = selectedType === "all" ? lineDepartures : lineDepartures.filter(item => departureType(item.line) === selectedType);
   const displayedDepartures = expandedDepartures.has(favoriteName) ? visibleDepartures : visibleDepartures.slice(0, 4);
   const filterMarkup = directions.length > 1 || lines.length > 1 ? `<div class="departure-tools"><div class="filter-groups">${lines.length > 1 ? `<div class="filter-group"><span class="filter-label" id="line-filter-label-${favoriteName.replace(/[^a-z0-9]/gi, "-")}">Linie</span><div class="direction-filters" role="group" aria-labelledby="line-filter-label-${favoriteName.replace(/[^a-z0-9]/gi, "-")}"><button type="button" class="direction-filter ${selectedLine === "all" ? "is-active" : ""}" data-line="all">Alle</button>${lines.map(line => `<button type="button" class="direction-filter ${selectedLine === line ? "is-active" : ""}" data-line="${escapeHtml(line)}">${escapeHtml(line)}</button>`).join("")}</div></div>` : ""}${directions.length > 1 ? `<div class="filter-group"><span class="filter-label">Richtung</span><div class="direction-filters" role="group" aria-label="Richtung auswählen"><button type="button" class="direction-filter ${selectedDirection === "all" ? "is-active" : ""}" data-direction="all">Alle</button>${directions.map(direction => `<button type="button" class="direction-filter ${selectedDirection === direction ? "is-active" : ""}" data-direction="${escapeHtml(direction)}">${escapeHtml(direction)}</button>`).join("")}</div></div>` : ""}</div><button type="button" class="share-stop">Teilen</button></div>` : `<div class="share-row"><button type="button" class="share-stop">Teilen</button></div>`;
+  const optionalFilterMarkup = directions.length > 1 || lines.length > 1 ? `<details class="departure-filter-details"><summary>Weitere Filter</summary>${filterMarkup}</details>` : filterMarkup;
   const cacheNotice = departures.fromCache ? `<p class="cache-notice">Letzter bekannter Stand – Aktualisierung momentan nicht möglich.</p>` : "";
-  if (!visibleDepartures.length) return `${filterMarkup}${cacheNotice}<p class="empty-copy">Keine Abfahrten für diese Auswahl.</p>`;
+  if (!visibleDepartures.length) return `${optionalFilterMarkup}${cacheNotice}<p class="empty-copy">Keine Abfahrten für diese Auswahl.</p>`;
   const moreButton = visibleDepartures.length > 4 ? `<button type="button" class="more-departures">${expandedDepartures.has(favoriteName) ? "Weniger anzeigen" : `+ ${visibleDepartures.length - 4} weitere`}</button>` : "";
-  return `${filterMarkup}${cacheNotice}<div class="departures">${displayedDepartures.map(departure => {
+  return `${optionalFilterMarkup}${cacheNotice}<div class="departures">${displayedDepartures.map(departure => {
     const departureDate = new Date(departure.time);
     const time = departureDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
     const minutes = Math.max(0, Math.round((departureDate.getTime() - Date.now()) / 60000));
@@ -103,7 +118,7 @@ function departureMarkup(departures, favoriteName = "") {
     const statusClass = cancelled ? "status-cancelled" : departure.delayMinutes > 0 ? "status-delayed" : "status-on-time";
     const delay = cancelled ? `<em class="status-badge status-badge--cancelled">Ausfall</em>` : departure.delayMinutes > 0 ? `<em class="status-badge status-badge--delayed">+${departure.delayMinutes} Min.</em>` : `<em class="status-badge status-badge--on-time">Pünktlich</em>`;
     const platform = departure.platform ? ` · Gleis ${escapeHtml(departure.platform)}` : "";
-    const type = /^\d+$/.test(departure.line) && Number(departure.line) < 100 ? "tram" : "bus";
+    const type = departureType(departure.line) === "bahn" ? "tram" : "bus";
     return `<div class="departure ${statusClass}" aria-label="Linie ${escapeHtml(departure.line)}, Richtung ${escapeHtml(departure.direction)}, ${cancelled ? "fällt aus" : `${time}, ${status}`}"><span class="line-badge line-badge--${type}">${escapeHtml(departure.line)}</span><span class="departure-info"><strong class="departure-countdown">${relative}</strong><span class="departure-detail">${escapeHtml(departure.direction)}${platform} · ${status}</span></span><span class="departure-time">${time}</span>${delay}</div>`;
   }).join("")}</div>${moreButton}`;
 }
@@ -111,7 +126,7 @@ function departureMarkup(departures, favoriteName = "") {
 function renderFavorite(favorite, index) {
   const item = document.createElement("article");
   item.className = "stop-item";
-  item.innerHTML = `<button class="stop-button" type="button" aria-expanded="false"><span class="stop-copy"><span class="stop-name">${escapeHtml(favorite.name)}</span><span class="stop-meta">${escapeHtml(favorite.locationName || "Köln")}</span></span><span class="chevron">›</span></button><div class="departure-slot"></div>`;
+  item.innerHTML = `<div class="stop-header"><button class="stop-button" type="button" aria-expanded="false"><span class="stop-copy"><span class="stop-name">${escapeHtml(favorite.name)}</span><span class="stop-meta">${escapeHtml(favorite.locationName || "Köln")}</span></span><span class="chevron">›</span></button><span class="stop-filters"></span></div><div class="departure-slot"></div>`;
   item.querySelector(".stop-button").addEventListener("click", async () => {
     const slot = item.querySelector(".departure-slot");
     const button = item.querySelector(".stop-button");
@@ -132,24 +147,26 @@ function renderFavorite(favorite, index) {
     slot.classList.add("is-open");
     slot.innerHTML = `<p class="empty-copy">Abfahrten werden geladen …</p>`;
     openFavorites.set(favorite.name, { favorite, slot });
-    try { const departures = await getDepartures(favorite); const entry = openFavorites.get(favorite.name); if (entry) entry.departures = departures; slot.innerHTML = departureMarkup(departures, favorite.name); bindDepartureActions(slot, favorite); } catch (error) { slot.innerHTML = `<p class="empty-copy">${escapeHtml(friendlyError(error))}</p><button class="retry-button" type="button">Erneut versuchen</button>`; slot.querySelector(".retry-button").addEventListener("click", () => button.click()); }
+    try { const departures = await getDepartures(favorite); const entry = openFavorites.get(favorite.name); if (entry) entry.departures = departures; item.querySelector(".stop-filters").innerHTML = departureTypeMarkup(departures, favorite.name); slot.innerHTML = departureMarkup(departures, favorite.name); bindDepartureActions(item, favorite); } catch (error) { slot.innerHTML = `<p class="empty-copy">${escapeHtml(friendlyError(error))}</p><button class="retry-button" type="button">Erneut versuchen</button>`; slot.querySelector(".retry-button").addEventListener("click", () => button.click()); }
   });
   favoriteList.appendChild(item);
 }
 
-function bindDepartureActions(slot, favorite) {
-  slot.querySelectorAll(".direction-filter").forEach(button => button.addEventListener("click", () => {
+function bindDepartureActions(container, favorite) {
+  const slot = container.querySelector(".departure-slot") || container;
+  container.querySelectorAll(".direction-filter").forEach(button => button.addEventListener("click", () => {
     if (button.dataset.line) lineFilters.set(favorite.name, button.dataset.line);
     if (button.dataset.direction) directionFilters.set(favorite.name, button.dataset.direction);
+    if (button.dataset.type) typeFilters.set(favorite.name, button.dataset.type);
     const entry = openFavorites.get(favorite.name);
-    if (entry?.departures || favorite.departures) { slot.innerHTML = departureMarkup(entry?.departures || favorite.departures, favorite.name); bindDepartureActions(slot, favorite); }
+    if (entry?.departures || favorite.departures) { const stopFilters = container.querySelector(".stop-filters"); if (stopFilters) stopFilters.innerHTML = departureTypeMarkup(entry?.departures || favorite.departures, favorite.name); slot.innerHTML = departureMarkup(entry?.departures || favorite.departures, favorite.name); bindDepartureActions(container, favorite); }
   }));
   slot.querySelector(".more-departures")?.addEventListener("click", () => {
     if (expandedDepartures.has(favorite.name)) expandedDepartures.delete(favorite.name);
     else expandedDepartures.add(favorite.name);
     const entry = openFavorites.get(favorite.name);
-    if (entry?.departures) { slot.innerHTML = departureMarkup(entry.departures, favorite.name); bindDepartureActions(slot, favorite); }
-    else if (favorite.departures) { slot.innerHTML = departureMarkup(favorite.departures, favorite.name); bindDepartureActions(slot, favorite); }
+    if (entry?.departures) { slot.innerHTML = departureMarkup(entry.departures, favorite.name); bindDepartureActions(container, favorite); }
+    else if (favorite.departures) { slot.innerHTML = departureMarkup(favorite.departures, favorite.name); bindDepartureActions(container, favorite); }
   });
   slot.querySelector(".share-stop")?.addEventListener("click", async () => {
     const shareUrl = `${location.origin}${location.pathname}?stop=${encodeURIComponent(favorite.name)}`;
@@ -288,18 +305,28 @@ document.getElementById("findNearby").addEventListener("click", () => {
       if (!data.ok) throw new Error(data.error);
       document.getElementById("nearbyMessage").textContent = `${data.stops.length} Haltestellen in deiner Nähe`;
       const nearbyFavorites = loadFavorites();
-      const list = document.getElementById("nearbyList"); list.innerHTML = data.stops.map(stop => { const saveButton = hasFavorite(nearbyFavorites, stop.name) ? "" : `<button class="nearby-save" type="button" data-name="${escapeHtml(stop.name)}" aria-label="${escapeHtml(stop.name)} als Favorit speichern">☆</button>`; return `<div class="nearby-row"><button class="nearby-result" type="button" data-name="${escapeHtml(stop.name)}"><strong>${escapeHtml(stop.name)}</strong><span>${Math.round(stop.distance)} m</span></button>${saveButton}</div>`; }).join("") + `<div id="nearbyDepartures" class="nearby-departures" hidden></div>`;
+      const list = document.getElementById("nearbyList"); list.innerHTML = data.stops.map(stop => { const saveButton = hasFavorite(nearbyFavorites, stop.name) ? "" : `<button class="nearby-save" type="button" data-name="${escapeHtml(stop.name)}" aria-label="${escapeHtml(stop.name)} als Favorit speichern">☆</button>`; return `<div class="nearby-row"><button class="nearby-result" type="button" data-name="${escapeHtml(stop.name)}" aria-expanded="false"><strong>${escapeHtml(stop.name)}</strong><span>${Math.round(stop.distance)} m</span></button>${saveButton}<div class="nearby-departures" hidden></div></div>`; }).join("");
       list.querySelectorAll(".nearby-result").forEach(button => button.addEventListener("click", () => {
         const name = button.dataset.name;
-        const nearbyDepartures = document.getElementById("nearbyDepartures");
+        const nearbyDepartures = button.closest(".nearby-row").querySelector(".nearby-departures");
+        const nearbyKey = `nearby:${name}`;
+        const nearbyFavorite = { name: nearbyKey, locationName: `Köln ${name}` };
+        const row = button.closest(".nearby-row");
+        const wasOpen = !nearbyDepartures.hidden;
+        list.querySelectorAll(".nearby-departures").forEach(slot => { slot.hidden = true; });
+        list.querySelectorAll(".nearby-result").forEach(result => result.setAttribute("aria-expanded", "false"));
+        if (wasOpen) return;
+        button.setAttribute("aria-expanded", "true");
         nearbyDepartures.hidden = false;
         nearbyDepartures.innerHTML = `<h3>${escapeHtml(name)}</h3><p class="empty-copy">Abfahrten werden geladen …</p>`;
-        getDepartures({ name, locationName: `Köln ${name}` }).then(departures => {
-          nearbyDepartures.innerHTML = `<h3>${escapeHtml(name)}</h3>${departureMarkup(departures)}`;
+        getDepartures(nearbyFavorite).then(departures => {
+          nearbyFavorite.departures = departures;
+          nearbyDepartures.innerHTML = `<h3>${escapeHtml(name)}</h3>${departureMarkup(departures, nearbyKey)}`;
+          bindDepartureActions(nearbyDepartures, nearbyFavorite);
         }).catch(error => {
           nearbyDepartures.innerHTML = `<h3>${escapeHtml(name)}</h3><p class="empty-copy">${escapeHtml(friendlyError(error))}</p>`;
         });
-        nearbyDepartures.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        row.querySelector(".nearby-departures").scrollIntoView({ behavior: "smooth", block: "nearest" });
       }));
       list.querySelectorAll(".nearby-save").forEach(button => button.addEventListener("click", () => {
         const name = button.dataset.name; const favorites = loadFavorites();
