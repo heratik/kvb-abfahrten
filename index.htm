@@ -92,8 +92,9 @@
     if ('serviceWorker' in navigator) {
       let refreshing = false;
       navigator.serviceWorker.register('sw.js').then(registration => {
-        const showUpdate = () => {
-          if (!registration.waiting || !navigator.serviceWorker.controller) return;
+        const showUpdate = worker => {
+          const waitingWorker = worker || registration.waiting;
+          if (!waitingWorker || !navigator.serviceWorker.controller) return;
           const notice = document.getElementById('updateNotice');
           const button = document.getElementById('applyUpdate');
           notice.hidden = false;
@@ -102,19 +103,18 @@
             button.textContent = 'Aktualisiere …';
             notice.querySelector('span').textContent = 'Neue Version wird aktiviert …';
             notice.hidden = true;
-            registration.waiting?.postMessage('SKIP_WAITING');
-            window.setTimeout(async () => {
-              if (refreshing) return;
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              await Promise.all(registrations.map(item => item.unregister()));
-              window.location.reload();
-            }, 1500);
+            waitingWorker.postMessage('SKIP_WAITING');
+            window.setTimeout(() => { if (!refreshing) window.location.reload(); }, 3000);
           };
         };
-        if (registration.waiting) showUpdate(registration.waiting);
-        registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', event => {
-          if (event.target.state === 'installed') showUpdate();
-        }));
+        showUpdate();
+        registration.addEventListener('updatefound', () => {
+          const worker = registration.installing;
+          worker?.addEventListener('statechange', event => {
+            if (event.target.state === 'installed') showUpdate(worker);
+          });
+        });
+        registration.update();
         setInterval(() => registration.update(), 5 * 60 * 1000);
       }).catch(() => {});
       navigator.serviceWorker.addEventListener('controllerchange', () => {
